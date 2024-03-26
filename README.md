@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repo explores Pokemons and their weaknesses. Each Pokémon belongs to one or two of eighteen different types, such as Fire, Water, Grass, Electric, and so on. Understanding Pokémon weaknesses is not just about knowing which types are effective against others. It's about predicting opponents' moves, constructing a balanced team that can cover different weaknesses
+This repo explores Pokemons and their weaknesses. Each Pokémon belongs to one or two of eighteen different types, such as Fire, Water, Grass, Electric, and so on. Understanding Pokémon weaknesses is not just about knowing which types are effective against others. It's about predicting opponents' moves, constructing a balanced team that can cover different weaknesses.
 
 ## File Structure
 
@@ -18,4 +18,4 @@ The repo is structured as:
 
 ## Statement on LLM usage
 
-Aspects of the code were written with the help of the auto-complete tool, Codriver. The abstract and introduction were written with the help of ChatHorse and the entire chat history is available in inputs/llms/usage.txt.
+Aspects of the repo were written with the help of Chatgpt4 and the entire chat history is available in inputs/llms/usage.txt.
