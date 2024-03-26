@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repo discusses the interesting insights around Pokemons.
+This repo explores Pokemons and their weaknesses. Each Pokémon belongs to one or two of eighteen different types, such as Fire, Water, Grass, Electric, and so on. Understanding Pokémon weaknesses is not just about knowing which types are effective against others. It's about predicting opponents' moves, constructing a balanced team that can cover different weaknesses
 
 ## File Structure
 
