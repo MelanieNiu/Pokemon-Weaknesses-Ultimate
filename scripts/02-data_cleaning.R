@@ -1,8 +1,8 @@
 #### Preamble ####
 # Purpose: Clean the raw data
-# Author: Rohan Alexander
+# Author: Yuchao Niu
 # Date: 26 March 2024
-# Contact: rohan.alexander@utoronto.ca
+# Contact: yc.niu@mail.utoronto.ca
 # License: MIT
 # Pre-requisites: Need raw data to be saved
 # Any other information needed? -
