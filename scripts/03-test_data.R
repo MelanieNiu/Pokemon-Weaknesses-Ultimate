@@ -1,5 +1,5 @@
 #### Preamble ####
-# Purpose: Tests the Cancer Dataset
+# Purpose: Tests the Police Crime Data
 # Author: yc.niu@utoronto.ca
 # Date: April 4th, 2024
 # Contact: yc.niu@utoronto.ca
@@ -7,57 +7,66 @@
 
 
 #### Workspace setup ####
+install.packages("testthat")
 library(tidyverse)
+library(testthat)
+library(dplyr)
+library(arrow)
 
-#### Test data ####
+analysis_data <- read_parquet("data/analysis_data/analysis_data.parquet")
+data <- analysis_data
 
-# 1. Test for Missing Values
-if (anyNA(cancer_data)) {
-  stop("There are missing values in the dataset.")
-}
+#### Tests ####
 
-# 2. Test if the maximum year is 2023
-if (max(cancer_data$Year) != 2023) {
-  stop("The maximum year in the dataset is not 2023.")
-}
+# Test 1: Data frame should have the correct number of columns
+test_that("Data frame has the correct number of columns", {
+  expect_equal(ncol(data), 7)
+})
 
-# 3. Test if the minimum year is 2004
-if (max(cancer_data$Year) != 2023) {
-  stop("The minimum year in the dataset is not 2004.")
-}
+# Test 2: Data frame has the correct column names
+test_that("Data frame has the correct column names", {
+  expect_equal(colnames(data), c("year", "province", "crime_severity_index", "police_officers_per_100_000_population", "police_civilian_ratio", "woman_to_man_ratio", "unfilled_position_per_100_000_population"))
+})
 
-# 4. Test if the type of year is integer
-if (!is.integer(cancer_data$Year)) {
-stop("The type of 'Year' in the dataset is not integer.")
-}
+# Test 3: No NA values should be present
+test_that("Data contains no NA values", {
+  expect_true(!any(is.na(data)))
+})
 
-# 5. Test if unique hospital indices are one of the values from 1 to 5
-if (!all(unique(cancer_data$Hospital) %in% 1:5)) {
-  stop("The unique hospital indices are not one of the values from 1 to 5.")
-}
+# Test 4: Year range should be between 2000 and 2023
+test_that("Year column within valid range", {
+  expect_true(all(data$year >= 2000 & data$year <= 2023))
+})
 
-# 6. Test for missing values
-if (anyNA(cancer_data)) {
-  stop("There are missing values in the dataset.")
-}
+# Test 5: Province names are valid
+test_that("Provinces are valid", {
+  valid_provinces <- c("Alberta", "British Columbia", "Manitoba", "Maritime", "Newfoundland and Labrador",
+                       "Ontario", "Quebec", "Saskatchewan")
+  expect_true(all(data$province %in% valid_provinces))
+})
 
-# 7. Test for any death number that is negative
-if (any(cancer_data$Deaths < 0)) {
-  stop("There are negative values for deaths.")
-}
+# Test 6: Crime severity index should be within a realistic range
+test_that("Crime severity index is within range", {
+  expect_true(all(data$crime_severity_index >= 30 & data$crime_severity_index <= 300))
+})
 
-# 8. Test for any death number that is not integer
-if(!is.integer(cancer_data$death)) {
-  stop("The type of 'Deaths' in the dataset is not integer.")
-}
+# Test 7: Police per 100k should be within a specified range
+test_that("Police per 100k is within range", {
+  expect_true(all(data$police_officers_per_100_000_population>= 100 & data$police_officers_per_100_000_population <= 300))
+})
 
-# 9. Test for distribution of deaths (poisson)
-lambda <- 120
-if (abs(mean(cancer_data$Deaths) - lambda) > 1) {
-  stop("Mean of deaths is not approximately equal to the Poisson parameter.")
-}
+# Test 8: Woman-to-man ratio should be between 0.1 and 1
+test_that("Woman-to-man ratio is within range", {
+  expect_true(all(data$woman_to_man_ratio >= 0.1 & data$woman_to_man_ratio <= 1))
+})
 
-# 10. Test for any duplications in the data frame
-if (any(duplicated(cancer_data[c("Year", "Hospital")]))) {
-  stop("There are duplicate combinations of year and hospital in the dataset.")
-}
+# Test 9: Data frame should have exactly 100 rows if expected
+test_that("Data frame has 230 rows", {
+  expect_equal(nrow(data), 230)
+})
+
+# Test 10: Check for duplicate rows
+test_that("No duplicate rows are present", {
+  expect_equal(nrow(data), nrow(distinct(data)))
+})
+
