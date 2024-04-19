@@ -1,30 +1,41 @@
 #### Preamble ####
-# Purpose: Clean the raw data
+# Purpose: Cleans the Raw Data
 # Author: Yuchao Niu
-# Date: 26 March 2024
-# Contact: yc.niu@mail.utoronto.ca
+# Date: 6 April 2023 
+# Contact: yc.niu@utoronto.ca
 # License: MIT
-# Pre-requisites: Need raw data to be saved
-# Any other information needed? -
 
 #### Workspace setup ####
-library(arrow)
+install.packages("janitor")
 library(tidyverse)
+library(arrow)
+library(janitor)
+library(ggplot2)
+library(dplyr)
 
 #### Clean data ####
-raw_data <- read_csv("data/raw_data/raw_data.csv")
+raw_data_a <- read_parquet("../Police_crime_analysis/data/raw_data/raw_data.parquet")
+view(raw_data_a)
+raw_data_a <- raw_data_a |>
+  select(REF_DATE, GEO, Statistics, VALUE)
 
-cleaned_data <-
-  raw_data |>
-  janitor::clean_names() |>
-  select(-timestamp) |>
-  rename(c(certainty = how_certain_about_your_guess_are_you,
-           outcome = what_was_the_outcome)) |> 
-  mutate(
-    outcome = if_else(outcome == "Guessed right",
-                      1,
-                      0))
+raw_data_a <- raw_data_a |>
+  pivot_wider(id_cols = c(1,2), names_from = Statistics, values_from = VALUE) |>
+  clean_names()
 
+raw_data_a <- raw_data_a |>
+  mutate(woman_to_man_ratio = women_police_officers/men_police_officers,unfilled_position_per_100_000_population = authorized_police_officer_strength_per_100_000_population - police_officers_per_100_000_population) |>
+  rename(year = ref_date, province = geo) |>
+  # mutate(province = case_when(
+  #   geo %in% c("Nova Scotia","New Brunswick", "Prince Edward Island") ~ "Maritime",
+  #   TRUE ~ as.character(geo)
+  #   )
+  # ) |>
+  select(year, province, police_civilian_ratio, police_officers_per_100_000_population, woman_to_man_ratio, unfilled_position_per_100_000_population)
+
+view(analysis_data)
+dim(raw_data_a)
 
 #### Save data ####
-write_parquet(cleaned_data, "data/analysis_data/analysis_data.parquet")
+write_parquet(analysis_data, "../Police_crime_analysis/data/analysis_data/analysis_data.parquet")
+

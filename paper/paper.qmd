@@ -1,13 +1,14 @@
 ---
-title: "My title"
-subtitle: "My subtitle if needed"
+title: "Crime Examination: The Study of Crime Severity Index in Canada, 2000-2023"
+subtitle: "Provinces Significantly Impact the Crime Severity Index and the Ratio of Woman to Man Police Officers Lowers It"
 author: 
-  - First author
-  - Another author
-thanks: "Code and data are available at: LINK."
+  - Yuchao Niu
+thanks: "Code and data are available at: https://github.com/MelanieNiu/Police-and-crime-rates"
 date: today
 date-format: long
-abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
+abstract: "Crime severity has been a longstanding concerns in our society. To investigate the effect of police services on crime rates, this paper seeks to dissect the influence of the police workforce on the severity and amounts of crime.
+A dataset from the Police Personnel and Selected Crime Statistics was sourced from the Open Government Data of Statistics Canada. A Bayesian generalized linear model was applied to analyze the data set. It revealed that with a higher ratio of female to male police officers there is a lowering effect in both the number of crimes and the severity of crimes committed. This points to an unexplored benefit of having more women in the police services reducing crime severity." 
+
 format: pdf
 number-sections: true
 bibliography: references.bib
@@ -19,93 +20,185 @@ bibliography: references.bib
 #| message: false
 
 library(tidyverse)
-library(palmerpenguins)
+library(kableExtra)
+library('gtsummary')
+library(arrow)
+library(ggplot2)
+library(kableExtra)
+library(rstanarm)
+library(knitr)
+library(bayesplot)  
+
+
+analysis_data <- read_parquet("../data/analysis_data/analysis_data.parquet")
+
 ```
 
 
 # Introduction
 
-You can and should cross-reference sections and sub-sections. We use @citeR and @rohan.
+Olivia Chow, the newest Mayor of Toronto, one of Canada's largest cities, faced the challenge of a rising crime rate immediately upon her election. Last month, the Mayor announced in the municipal budget release a substantial increase in funding to improve police emergency response [@ ].This move signifies a commitment to tackling what is perceived as an alarming escalation in urban crime. Crime, with its deep-seated roots in a complex web of social factors, presents a significant issue for both legislators and the public. It affects the pillars of economic development, justice, and the overall quality of life. Understanding crime rates enables government officials to make informed decisions and devise effective strategies to address criminal activity. A myriad of factors, including geographical, social, economic, and technological developments, influence crime rates. Law enforcement, serving as the primary deterrent against criminal activity, plays a pivotal role in crime prevention, as studies indicate.
 
-The remainder of this paper is structured as follows. @sec-data....
+The estimand discussed in this study is the crime severity index (CSI), which differs from the traditional per capita crime rate. The CSI takes into consideration not only the volume but also the gravity of crimes committed. In calculating the CSI, each offense is weighted based on the average sentence assigned by the criminal courts, reflecting the severity of the crime—the greater the sentence, the heavier the weight of the offense. Thus, more grievous offenses exert a more substantial influence on fluctuations in the index. The CSI encompasses all police-reported Criminal Code offenses, including traffic and other federal statute offenses. 
 
+The data for this study, titled "Police Personnel and Selected Crime Statistics," was sourced from the Open Government Data of Statistics Canada. It contains a broad array of information about the characteristics of police personnel across Canadian provinces from 2000 to 2023, derived from an annual police administration survey administered by the National Justice Statistics Initiative (NJSI). A Bayesian generalized linear model was applied to analyze the data set. The findings reveal that the ratio of female to male police officers in various provinces have a significant negative impact on the CSI. 
 
+The remainder of this paper is structured as follows: @sec-data introduces the data sources and measurements, describing the dataset variables and their representation through various visualizations and tables to elucidate trends and correlations. @sec-model details the construction of a Bayesian generalized linear regression model. @sec-results presents the results of the model and interprets the findings. Finally, @sec-discussion explores the implications of these findings, acknowledges the study's limitations, and suggests potential avenues for future research.
 
 # Data {#sec-data}
 
-Some of our data is of penguins (@fig-bills), from @palmerpenguins.
+## Data Source and Measurement
 
+The dataset is retrieved from the open Government Portal of Statistics Canada between 2000 and 2023. The source of the data is the Police Annual Survey. This survey collects data from police services across Canada under the authority of the Statistics Act, Revised Statutes of Canada, 1985. All municipal, provincial and federal police services in Canada are surveyed. Respondents provide the number of police officers, civilians, special constables and recruits employed by the police service (in full-time equivalents). The target population of the Police Administration Annual Survey is all Canadian municipal, provincial and federal police services. The reference period is May 15th of the reference year and the collection period is April of the reference year to the Fall of the reference year. The target population and observed population are the same [@statscan].
+
+Municipal and provincial police forces input data via an online form designed to be filled out by respondents themselves. This digital form prompts for specific figures in some fields, such as personnel numbers or financial allocations, and offers multiple-choice selections for others.
+
+The data on police officers is sorted by their rank, gender, and age. Civilian employees and special constables are also cataloged according to their roles within the service. As the survey is comprehensive and includes every unit within the target group, it acts more like a complete census therefore no sampling is done. 
+
+Error identification in the survey is performed promptly when a response is submitted, comparing it against the prior year's data to assess consistency and spot trends. Various factors, such as entry mistakes or incomplete contact details for police services, can introduce biases. To mitigate such issues, the survey framework is frequently updated through active communication with the police departments to capture any organizational changes.
+
+Similar datasets which may fulfill our study purposes include "Police personnel and selected crime statistics, municipal police services" made available also by the open Government Portal of Statistics Canada. Our dataset was chosen because provincial datasets offer a broader perspective, beneficial for us to understand regional trends and for a reasonable level of complexity. 
+
+## Data Characteristics
+
+The original dataset contains 2,760 observations of 15 variables offering  comprehensive insights into the dynamics of police personnel and crime statistics across Canadian Metropolitan provinces from 2000 to 2023. My research aims to analyze trends of the crime severity index and identify potential factors among police force personnel that could influence this metric.
+
+In the original dataset, police personnel characteristics are catalogued under the headers "Statistics" and "Values." "Statistics" includes categories such as "Total Number of Personnel," "Number of Women Police Officers," "Number of Men Police Officers," and "Total Number of Civilian and Other Personnel," with "Values" representing their corresponding figures. These categories were all included in the cleaned dataset for analysis. A sample of the cleaned data can be found in @sec-data-details. 
+
+Variable “Year” denotes the reference period of the survey. Variable “Province” indicates the province the survey respondent was located in. The provinces of Nova Scotia, New Brunswick, and Prince Edward Island have been grouped under the category 'Maritime Provinces' to simplify the layers of analysis. Variable ““Police officer per 100,000 population” gives the number of police officers not counting the civilians in the police force. “Criminal Code incidents per police officer” refers to the proportion of Criminal Code incidents to the number of police officers. I also constructed a variable “Woman-to-Man Ratio” which is not in the original dataset and refers to the ratio of woman police officers to man police officers. Moreover, the variable “Unfilled Police Officer Position” is calculated as the discrepancy between "Authorized Police Officer Strength of Population"—the ceiling number of officers permissible—and "Police Officers per 100,000 Population"—the actual count of officers.
+
+R [@citeR] was the language and environment used for the bulk of this analysis, alongside the tidyverse [@thereferencecanbewhatever], arrow[@arrow], ggplot2[@ggplot2], dplyr[@dplyr] and  have been used in data downloading, cleaning and visualization. 
+
+
+## Data Visualization
+
+In order to get further acquainted with the dataset and explore possible associations between the response variable crime severity index and predictor variables, exploratory analysis is conducted to deduce patterns and trend of data. 
+
+@fig-1 illustrates the trend of the crime severity index (CSI) across Canadian provinces from 2000 to 2023. The highest CSI recorded was in 2003 at 117. Although the overall trend declined, reaching a historical low of 75 in 2014, it has since climbed to over 90 post-2019.
 ```{r}
-#| label: fig-bills
-#| fig-cap: Bills of penguins
+#| label: fig-1
+#| fig-cap: Trends in Average Crime Severity Index in Canada, 2000 - 2023
 #| echo: false
+#| message: FALSE
+#| warning: FALSE
 
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(alpha = 0.8) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4"),
-                    guide = "none") +
+
+# Summarization by province
+analysis_data_province_summary <- analysis_data |>
+  group_by(province) |>
+  summarise(
+    mean_crime_severity_index = mean(crime_severity_index, na.rm = TRUE),
+    mean_woman_to_man_ratio = mean(woman_to_man_ratio, na.rm = TRUE), 
+  ) |>
+  ungroup()
+
+# Summarization by year
+analysis_data_year_summary <- analysis_data |>
+  group_by(year) |>
+  summarise(
+    mean_crime_severity_index = mean(crime_severity_index, na.rm = TRUE)
+  ) |>
+  ungroup()
+
+ggplot(analysis_data_year_summary, aes(x = year, mean_crime_severity_index)) +
+  geom_line(color = "red", alpha = 0.5) +
+  labs(x = "Year", y = "Average Crime Severity Index")
+```
+@fig-2 compares the average CSI over the past two decades for each province. Saskatchewan reports the highest average at 156.10609, with Manitoba closely following. The eastern provinces show lower CSI values, with Quebec having the lowest. The Maritime provinces and Newfoundland have similar CSIs. In contrast, Ontario and British Columbia have CSIs of 66.74826 and 114.57000, respectively.
+
+```{r fig.width=8, fig.height= 4}
+#| label: fig-2
+#| fig-cap: Average Crime Severity Index By Province
+#| echo: FALSE
+#| message: FALSE
+#| warning: FALSE
+
+ggplot(analysis_data_province_summary, aes(x = province, y = mean_crime_severity_index, fill = province)) +
+  geom_col() +
+  labs(x = "Province", y = "Average Crime Severity Index") +
   theme_minimal() +
-  facet_wrap(~species, ncol = 1) +
-  coord_flip()
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+@fig-3 examines the correlation between each province's CSI and the woman-to-man ratio within their police forces. A negative correlation is present in British Columbia, the Maritime provinces, Ontario, Quebec, and Saskatchewan. Alberta and Manitoba display a moderately negative correlation, while Newfoundland exhibits a slight positive correlation. This suggests that there may be a correlation between the CSI and the woman-to-man ratio within police forces.
+
+```{r fig-3, fig.cap="Woman-to-Man-Ratio Trend in Canadian Provinces, 2000-2023", echo=FALSE, message=FALSE, warning=FALSE, fig.width=7, fig.height=9, fig.align='center'}
+
+ggplot(analysis_data, aes(x = crime_severity_index, y = woman_to_man_ratio, color = province)) + 
+  geom_point(alpha = 0.6) +  # Points with some transparency
+  geom_smooth(method = "lm", se = FALSE, color = "grey") +  # Linear regression line
+  facet_wrap(~ province, scales = "free") +  # Separate plot for each province
+  labs(title = "Correlation between Crime Severity Index and Woman to Man Ratio",
+       x = "Crime Severity Index",
+       y = "Woman to Man Ratio") +
+  theme_minimal() +
+  theme(strip.text.x = element_text(size = 10, color = "red"),
+        legend.position = "bottom")
+
 ```
 
-Talk more about it.
 
-And also planes (@fig-planes). (You can change the height and width, but don't worry about doing that until you have finished every other aspect of the paper - Quarto will try to make it look nice and the defaults usually work well once you have enough text.)
+@tbl-a summarizes police personnel and crime statistics derived from the cleaned dataset and provides a breakdown of various statistics across Canadian provinces, ratios, and crime metrics based on 220 recorded observations. The crime severity index has an average value of 85, with the range from 69 to 115. The "woman to man ratio" within the police force has an average of 0.21, with a lower and upper range of 0.17 and 0.25 respectively. Additionally, I introduced two variables — the woman-to-man ratio within the police force and unfilled police positions per 100,000 population — to investigate their potential associations with the crime severity index.
 
 ```{r}
-#| label: fig-planes
-#| fig-cap: Relationship between wing length and width
+#| label: tbl-a
 #| echo: false
+#| tbl-cap: "Summary of Police Personnel and Crime Statistics"
 #| warning: false
-#| message: false
+#
+police_data_summary <- analysis_data |>
+  select(-year) |>
+  rename("Police Civilian Ratio" = police_civilian_ratio, "Police Officers per 100,000 Population" = police_officers_per_100_000_population, "Woman to Man Ratio" = woman_to_man_ratio, "Unfilled Position per 100,000 Population " = unfilled_position_per_100_000_population, "Crime Severity Index" = crime_severity_index) |>
+  tbl_summary()
 
-analysis_data <- read_csv(here::here("data/analysis_data/analysis_data.csv"))
-
-analysis_data |> 
-  ggplot(aes(x = width, y = length)) +
-  geom_point(alpha = 0.8) +
-  theme_minimal() +
-  labs(x = "Wing width (mm)",
-       y = "Wing length (mm)")
+police_data_summary
 ```
 
-Talk way more about it. 
 
+# Model {#sec-model}
 
+Our modeling strategy aims to analyze crime data across all Canadian provinces from the past twenty years to deduce the relationship between the crime severity index —encompassing both the frequency and gravity of crimes— and a range of geographic, temporal, and police force-related factors. We employ a Bayesian framework to make predictive inferences about the crime severity index, allowing us to measure the certainty of these predictions.
 
-# Model
+Initially, our research will explore the determinants that may affect the community's crime severity index. Particular emphasis is on internal police force attributes, such as the strength and composition of the force, as well as external factors like geography (specifically province and year) and operational elements (such as workforce structure and density). Our aim is to quantify how these variables may predict changes in the crime severity index.
 
-The goal of our modelling strategy is twofold. Firstly,...
+Before model development, we divided the dataset into training and testing subsets at an 80:20 ratio. This division ensures that the model has robust predictive power across unseen data. The training subset informs the model construction, while the testing subset gauges the model’s performance against new, real-world data. We utilized the 'tidymodels' package for this process.
 
-Here we briefly describe the Bayesian analysis model used to investigate... Background details and diagnostics are included in [Appendix -@sec-model-details].
+Our analysis adopts a Bayesian methodology, advantageous for its adaptability. This approach involves assigning prior distributions to parameters based on existing knowledge and formulating a likelihood function from the data observed. Applying Bayes’ theorem, we amalgamate these priors with observed data likelihood to achieve posterior distributions, full probabilistic description of what the parameters might be after considering both prior beliefs and the observed data. Markov Chain Monte Carlo (MCMC) methods approximate these posteriors, integrating prior information and framing our findings within a probabilistic context.
+
+The construction and evaluation of our models are executed using the R packages 'rstanarm'[@rstanarm] and 'modelsummary' [@model]. 
 
 ## Model set-up
 
-Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
+In this model, define $Y_i$ as the number of criminal code incidents per police officer. $\mu$ and $\sigma$ are the mean and variance of the number of criminal code incidents per police officer. $\mu$ is linked to a linear combination of predictors by a log link function where $\beta_0$ is the intercept and $\beta_1$ is the coefficient of the predictor Year. $\beta_2$ is the coefficient of the predictor Province and $\beta_3$ is coefficient of the predictor police officer per 100,000 population. $\beta_4$ is the coefficient of the predictor woman to man ratio in the police force. 
 
-\begin{align} 
-y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
-\mu_i &= \alpha + \beta_i + \gamma_i\\
-\alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
-\sigma &\sim \mbox{Exponential}(1)
-\end{align}
+To enable our Bayesian analysis, we specify the prior distributions for the intercept $\beta_0$ to follow a normal distribution with mean 0 and standard deviation of 2.5. We expect that the intercept could reasonably be expected to fall within this range, subject to scaling based on the actual data.
 
-We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
+we specify the prior distributions of $\beta_1$, $\beta_2$ and $\beta_4$ to follow a normal distribution with mean 0 and conservative standard deviation of 2.5. We specify the prior of variance $\phi$ to follow a exponential distribution which is a common choice, for we don't have strong prior beliefs about the scale of the errors in the model model.  
 
+\begin{align*}
+Y_i &\sim \text{Normal}(\mu_i, \sigma) \\
+\log(\mu_i) &= \beta_0 + \beta_1 \text{Province}_i + \beta_2 \text{Police Officers per 100,000 Population}_i + \beta_3 \text{Woman to Man Ratio}_i \\
+\beta_0 &\sim \text{Normal}(0, 2.5) \\
+\beta_1 &\sim \text{Normal}(0, 2.5) \\
+\beta_2 &\sim \text{Normal}(0, 2.5) \\
+\beta_3 &\sim \text{Normal}(0, 2.5) \\
+\sigma &\sim \text{exp}(1)
+\end{align*}
 
 ### Model justification
 
-We expect a positive relationship between the size of the wings and time spent aloft. In particular...
+Given that the crime severity index is positive, continuous, and right-skewed in our data, we have several model choices. We opt for a generalized linear Bayesian regression model since it is adept at modeling the linear influence of covariates on the expected response, transformed via a link function. Considering this, a logarithmic transformation of the crime severity index was deemed appropriate for the outcome variable.
 
-We can use maths by including latex between dollar signs, for instance $\theta$.
+Provincial variation, which emerged as a significant factor during exploratory data analysis, is incorporated as a categorical predictor. The data suggests that differences in provincial law enforcement and social conditions significantly impact crime rates and severity. The woman-to-man ratio within police forces is also considered a predictor, in line with research suggesting that female officers may have a calming effect on conflict situations, potentially affecting crime rates. As we are unclear about the specific relationship between these predictors and the response variable, we adopt the default priors from 'rstanarm', which assume a neutral impact of predictors on the response variable. 
 
+In Bayesian analysis, the significance of predictors is determined by examining their posterior distributions, particularly the 95% credible intervals, which reflect the most probable range of the coefficients given the data and priors. Predictor Province and Woman-to-Man ratio intervals excluded zero, indicating a statistically significant relationship with the crime severity index, leading us to retain these two predictors in our model. The Civilian Police Ratio and Police Officers per 100,000 Population within the force was initially included in the first model. The variable Police Officers per 100,000 Population measures policing intensity and its possible correlation with crime severity. It's commonly believed that higher police-to-population ratio may correspond with reduced crime severity. These two predictors were subsequently reduced due to negligible coefficient estimates.
 
-# Results
+Model assumptions and further checks are detailed in @sec-model-details. 
 
-Our results are summarized in @tbl-modelresults.
+# Results {#sec-results}
+
+Our results are summarized in @tbl-modelresults. 
 
 ```{r}
 #| echo: false
@@ -115,8 +208,8 @@ Our results are summarized in @tbl-modelresults.
 
 library(rstanarm)
 
-first_model <-
-  readRDS(file = here::here("models/first_model.rds"))
+final_model <-
+  readRDS(file = here::here("models/third_model.rds"))
 ```
 
 ```{r}
@@ -126,31 +219,87 @@ first_model <-
 #| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
 #| warning: false
 
-modelsummary::modelsummary(
+
+plot_mdl <- modelsummary::modelsummary(
   list(
-    "First model" = first_model
+    "First model" = final_model
   ),
   statistic = "mad",
   fmt = 2
 )
+plot_mdl
+```
+
+@tbl-modelresults show the model results. The model suggests that the woman-to-man ratio within the police force negatively influences the crime severity index, while provincial differences also affect this index.
+
+@tbl-cred displays the credible intervals for the coefficients of the model’s predictors. With all intervals excluding zero, it can be inferred that each predictor significantly impacts the crime severity index, and thus no predictors were omitted from the model.
+
+The intercept, at 5.01 with a standard error of 0.06, implies that the expected baseline value of the crime severity index — in the context of Alberta and a zero woman-to-man ratio — is approximately 5.01. 
+
+The coefficients for each province, detailed in @tbl-modelresults illustrate their respective effects on the crime severity index in comparison to Alberta. Saskatchewan shows the largest increase, with a coefficient of 0.39 and a standard error of 0.04, implying that the crime severity index in Saskatchewan is higher by 2.45 compared to Alberta. Manitoba and British Columbia also show increases with coefficients of 0.16 and 0.14, respectively, translating to increases in the crime severity index by 1.44 and 1.38 . Conversely, Quebec, Newfoundland and Labrador, the Maritime provinces, and Ontario exhibit decreases in crime severity compared to Alberta, with coefficients of -0.26, -0.36, and -0.47 respectively, indicating decreases in the index by 0.54, 0.44, 0.36 and 0.34 due to provincial effects alone. 
+
+Furthermore, the woman-to-man ratio, with a coefficient of -1.59 and a standard error of 0.22, denotes that an increase in this ratio corresponds to an average decrease in the crime severity index by 0.03, underscoring a considerable impact.
+
+The credible intervals for all coefficients provide a range within which each parameter likely falls, considering the prior information and data. The standard 95% confidence level is used, meaning there is a 95% probability of the true parameter value lying within this range. This concept differs from the frequentist interpretation of confidence intervals. @fig-cred visualizes these intervals for each coefficient.
+
+```{r}
+#| echo: false
+#| eval: true
+#| label: fig-cred
+#| fig-cap: "Credible Intervals of Model Coefficients"
+#| warning: false
+
+par(mfrow = c(1,1))
+plot(final_model)
 ```
 
 
+```{r tbl-cred}
+#| label: tbl-cred
+#| tbl-cap: "Credible Intervals of Model Parameters"
+#| echo: FALSE
 
+posterior_intervals <- posterior_interval(final_model, prob = 0.95)
+kable(posterior_intervals, caption = "Credible Intervals of Model Parameters")
 
-# Discussion
+```
 
-## First discussion point {#sec-first-point}
+# Discussion {#sec-discussion}
 
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
+## The Effect of Province {#sec-first-point}
 
-## Second discussion point
+Over the past two decades the average crime rate in Saskatchewan is twice that of the Maritime provinces, as depicted in @fig-2. Our results further confirmed that provincial variances significantly impact the crime severity index (CSI). The Prairie regions, particularly Saskatchewan and Manitoba, have larger positive coefficients and increase the CSI to a greater extent compared to the baseline, while the provinces in eastern Canada have lower coefficients and lower the CSI. Such patterns may be symptomatic of underlying issues, potentially linked to demographic, income levels, and the efficacy of legislative measures in each province.
 
-## Third discussion point
+Provinces exhibit different income levels. The correlation between income and crime rate is commonly inverse, as suggested by various sources. Poverty is believed to stimulate criminal activity, because it can induce stress and limit job opportunities, potentially pushing individuals towards criminal conduct for survival. In addition it also impacts the allocation of resources towards policing and community safety initiatives, worsening crime rates. On the opposite, wealthy communities often allocate more resources to education and prevention, targeting root causes of crimes like youth delinquency and drug abuse. These areas typically benefit from environmental designs that inherently reduce crime, such as better lighting and well-maintained infrastructure—a concept known as "Crime Prevention Through Environmental Design." The results from our study challenge the general assumption, supported by international research (e.g., Mexico), that lower income equates to higher crime rates. In Canada, the Maritime provinces and Newfoundland, despite lower incomes compared to western provinces like Saskatchewan and British Columbia, have shown a lower influence on the crime severity index, suggesting that other factors may have mitigated the effect of income disparities.
 
-## Weaknesses and next steps
+Demographic factors could contribute to the observed differences. Regions with higher proportions of senior citizens, particularly in Atlantic Canada, Ontario, and British Columbia, tend to have lower crime rates. Older populations engage less in criminal activity, thus potentially reducing the crime severity index. Nonetheless, the effect is not absolute especially with the rising incidence of crimes targeting seniors, such as fraud, in recent years.
 
-Weaknesses and next steps should also be included.
+Ethnic and cultural diversity, along with migration patterns, may influence provincial crime rates. Contrary to the general perception that open immigration can lead to spikes in crime rates in host countries, our results showed that provinces with high retention rates of immigrants have differential effects on crime severity indices. Ontario had the highest retention rate (93.1 per cent) among immigrants who arrived in 2016, with B.C. (87.3 per cent) and Alberta (84.5 per cent) coming in second and third. Quebec had a five-year retention rate of 81 per cent among immigrants who came to Canada in 2016. Therefore the differential effects suggest other dynamics at play, given the different crime severity indices among these provinces [@immigration].
+
+Another aspect is the governance of law enforcement, which varies provincially despite uniform laws and sentencing guidelines across Canada. Each province's approach to law enforcement could also contribute to its influence on the crime severity index [@justice].
+
+## Woman-to-Man Ratio in Policing
+
+Among all the police personnel characteristics investigated, only the ratio between women police officers and men police officers shows a significant negative impact on the CSI.
+
+Although historically a male-dominated field, law enforcement has undergone a demographic transition since last century marked by an increasing presence of women in the profession. The study of women's roles within the police force is particularly interesting. While the presence of female officers in Canadian police forces is increasing, the precise impact this has on the crime severity index remains complex. Similar research, particularly within U.S. policing, indicates that an increase in female representation among officers correlates with higher reporting rates of violent crimes against women, especially in domestic violence (DV). These studies also show that as the proportion of female officers rises, there is a significant decrease in rates of intimate partner homicide and non-fatal domestic abuse. This consistency is seen across models controlling for economic and policy variables, as well as those focusing only on the effect of increases in female police employment. 
+
+A potential factor in the reduction of the crime severity index may be the propensity for women officers to de-escalate situations more effectively than their male counterparts. This trait can be particularly beneficial during emergencies where negotiation with potentially violent individuals is required. Additionally, the presence of female officers may foster greater workplace harmony within the police force. Research supports that diversity within law enforcement can enhance both individual and collective performance across various measures.
+
+## Weaknesses and Limitations
+
+While the results of the study can help inform law officials and the general public, particularly in the context of metropolitan areas in Canada, they do not necessarily apply to areas with distinct social dynamics and policing challenges, such as Yukon, Nunavut, and the Northwest Territories. Therefore the results may be limited in its generalizability to guide resource distribution or decision making in these regions. 
+
+In addition, the study's scope is somewhat limited by its small sample size of 230 observations. A larger sample size would be able to increase the statistical power, enhancing the ability to detect real effects or differences that a smaller study might miss due to insufficient power.
+
+The ratio of women officers to men officers as discussed could potentially influence the effectiveness of police intervention at the scene. However, this effect may not extend to crimes that have already occurred. Therefore the nature of the criminal code incidents also warrent investigation to deduce the more specific impact of the gender ratio. 
+
+Lastly an in-depth look at factors related to police force personnel reveals potential areas for further investigation. For instance, the Royal Canadian Mounted Police (RCMP) plays a critical role in law enforcement across Canada, alongside emergency response teams. Analyzing the impact of the RCMP in tandem with emergency response units could yield comprehensive insights into overall law enforcement effectiveness.
+
+## Next Steps
+
+The study addresses the research question of how provincial characteristics and the gender composition of police forces correlate with crime severity indices. It also opens up opportunities for future research, which can broaden to include non-metropolitan regions and examine specific crime categories to represent the complexities of the crime severity index further. Investigating the causality behind the women-to-men ratio and its influence on crime, as well as incorporating qualitative methods such as surveys and interviews, will enhance our understanding of these correlations.
+
 
 \newpage
 
@@ -159,15 +308,67 @@ Weaknesses and next steps should also be included.
 # Appendix {-}
 
 
-# Additional data details
+
+# Additional data details {#sec-data-details}
+
+```{r}
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+#| label: tbl-clean
+#| tbl-cap: "A sample of the cleaned dataset of Police Personnel and Crime Statistics in Canada, 2000-2023"
+
+sampled_data <- sample_n(analysis_data, 5) |>
+  select(year, province, crime_severity_index, police_civilian_ratio) |>
+  kable()
+sampled_data
+```
+
+```{r}
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+#| label: fig-rvsf
+#| fig-cap: "Residual vs. Fitted of the model"
+
+fitted_values <- fitted(final_model)
+
+# Calculate residuals
+residuals <- residuals(final_model)
+
+# Plot fitted values vs residuals
+plot(fitted_values, residuals,
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     main = "Residuals vs Fitted Values",
+     pch = 20)
+abline(h = 0, col = "red") # Adds a horizontal line at 0
+```
+
+The Residuals vs Fitted plot checks for the linear relationship assumption. Since the red line is almost horizontal and there isn’t any pattern, the model satisfies the linearity assumption. @fig-QQ the Normal QQ plot checks for the residual normality assumption. Since almost all the dots are on the dashed line, the residuals follow a normal distribution.
+
+```{r}
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+#| label: fig-QQ
+#| fig-cap: "Residual Normality of the model"
+
+qqnorm(final_model$residuals, pch = 1, frame = FALSE)
+qqline(final_model$residuals, col = "blue", lwd = 2)
+```
+
 
 # Model details {#sec-model-details}
 
+## model 
+
 ## Posterior predictive check
 
-In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This shows...
-
-In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows... 
+In @fig-ppcheckandposteriorvsprior we implement a posterior predictive check for the model described in @sec-model. This shows predictions generated from the posterior distribution of the model parameters (represented by the light blue lines) align generally well with the actual data (represented by the dark blue line). This suggests the model represents the data well. 
 
 ```{r}
 #| eval: true
@@ -175,42 +376,58 @@ In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. Th
 #| message: false
 #| warning: false
 #| label: fig-ppcheckandposteriorvsprior
-#| layout-ncol: 2
 #| fig-cap: "Examining how the model fits, and is affected by, the data"
-#| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
 
-pp_check(first_model) +
+pp_check(final_model) +
   theme_classic() +
   theme(legend.position = "bottom")
 
-posterior_vs_prior(first_model) +
-  theme_minimal() +
-  scale_color_brewer(palette = "Set1") +
-  theme(legend.position = "bottom") +
-  coord_flip()
 ```
 
 ## Diagnostics
 
-@fig-stanareyouokay-1 is a trace plot. It shows... This suggests...
+@tbl-modelresults showed that the R-squared value of 0.797 indicating that approximately 79.7% of the variation in the crime severity index is explained by the model, suggesting a good fit between the model and the data.
 
-@fig-stanareyouokay-2 is a Rhat plot. It shows... This suggests...
+The log-likelihood of 109.580 is a measure of the probability of observing the data given the model. The higher the log-likelihood, the better the model fits the data. 
+
+The expected log predictive density (ELPD) is a measure used in Bayesian statistics for model comparison and validation, with higher values indicating better predictive performance.
+
+LOOIC (Leave-One-Out Information Criterion): At -198.1, this is another measure of model performance, specifically for predictive accuracy. Lower values indicate better out-of-sample prediction. The negative value here suggests a good model fit.
+
+WAIC (Watanabe-Akaike Information Criterion): Similar to LOOIC, WAIC at -198.9 suggests good out-of-sample prediction capability. Again, the lower the better.
+
+RMSE (Root Mean Square Error):  An RMSE of 0.15 is quite low, suggesting that the model's predictions are very close to the actual values.
+
+
+@fig-stanareyouokay-a-1 is a trace plot for the final model. It shows a horizontal, dense band of samples without any systematic patterns, drifts, or long periods of stagnation. This pattern suggests that the chain is mixing well and sampling efficiently from the posterior distribution. This suggests the model is suitable.
+
+@fig-stanareyouokay-a-2 is a Rhat plot. It shows an Rhat value falling in the range 1-1.1.  This suggests that the chains have converged to the target distribution in the Poisson model.
+
 
 ```{r}
 #| echo: false
 #| eval: true
 #| message: false
 #| warning: false
-#| label: fig-stanareyouokay
+#| label: fig-stanareyouokay-a-1
 #| fig-cap: "Checking the convergence of the MCMC algorithm"
-#| fig-subcap: ["Trace plot", "Rhat plot"]
-#| layout-ncol: 2
 
-plot(first_model, "trace")
+plot(final_model, "trace")
 
-plot(first_model, "rhat")
+
 ```
 
+```{r}
+#| echo: false
+#| eval: true
+#| message: false
+#| warning: false
+#| label: fig-stanareyouokay-a-2
+#| fig-cap: "Checking the convergence of the MCMC algorithm"
+
+
+plot(final_model, "rhat")
+```
 
 
 \newpage
